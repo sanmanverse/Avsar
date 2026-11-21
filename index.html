@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Avsar</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{--bg:#faf8f4;--card:#fff;--tx:#1d1b18;--mu:#6e6a62;--ac:#d9480f;--bd:#e6e1d8;--ok:#2b8a3e;--wa:#e67700;--bad:#c92a2a}
+@media(prefers-color-scheme:dark){:root{--bg:#161412;--card:#201d1a;--tx:#f3efe8;--mu:#a39d92;--ac:#ff8a4c;--bd:#35302a;--ok:#69db7c;--wa:#fcc419;--bad:#ff8787}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,sans-serif;padding:14px;max-width:760px;margin:auto}
+h1{font:700 26px Georgia,serif;margin:4px 0}.m{color:var(--mu);font-size:13px}
+.bar{display:flex;gap:6px;overflow-x:auto;margin:8px 0}.chip,button,select,input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:6px 12px}
+.chip.on,.pri{background:var(--ac);color:#fff;border-color:var(--ac)}.chip{white-space:nowrap;cursor:pointer}
+.row{display:flex;gap:6px;margin:6px 0}.row>*{flex:1;min-width:0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.t{font-weight:650}.tag{font-size:11px;border:1px solid var(--bd);border-radius:10px;padding:2px 8px;margin-right:4px}
+.b{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.b button{border-radius:10px;padding:5px 10px;cursor:pointer}
+a{color:var(--ac)}.ok{color:var(--ok)}.wa{color:var(--wa)}.bad{color:var(--bad)}
+</style></head><body>
+<h1>Avsar · अवसर</h1><div id="u" class="m"></div><div id="app"></div>
+<script>
+const SYN={ai:["machine learning","ml","deep learning","llm"],web:["frontend","backend","full stack","react","node"],finance:["investment","trading","equity","banking"],case:["case study","consulting","strategy"],internship:["intern","summer research","fellowship"],coding:["competitive programming","dsa","algorithm"],cybersecurity:["security","ctf","hacking"],startup:["entrepreneurship","pitch","business plan"],design:["ui","ux","product design"]};
+const $=s=>document.querySelector(s),esc=s=>String(s||"").replace(/[&<>"]/g,c=>"&#"+c.charCodeAt(0)+";"),url=s=>/^https?:\/\//i.test(s||"")?esc(s):"";
+let T,API,D={items:[],user:{}},S={tab:"remaining",sort:"deadline",type:"All",q:""};
+try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("t")){localStorage.setItem("av_t",h.get("t"));localStorage.setItem("av_api",h.get("api"));history.replaceState(null,"",location.pathname)}T=localStorage.getItem("av_t");API=localStorage.getItem("av_api")}catch(e){}
+const left=d=>Math.ceil((new Date(d+"T23:59:59")-new Date())/864e5);
+const match=x=>{const I=D.user.interests||[];if(!I.length)return 0;const b=[x.type,(x.tags||[]).join(" "),x.name,x.details].join(" ").toLowerCase();return Math.min(100,40*I.filter(i=>[i,...(SYN[i]||[])].some(k=>b.includes(k))).length)};
+async function api(p,o){const r=await fetch(API+p,{...o,headers:{Authorization:"Bearer "+T,"content-type":"application/json"}});if(r.status===401){try{localStorage.clear()}catch(e){}location.reload();return}return r.json()}
+const TABS={remaining:["⏳ Remaining",x=>x.status==="tracking"],applied:["✅ Applied",x=>x.status==="applied"],new:["🆕 New",x=>x.status==="new"||x.status==="none"],skipped:["🚫 Skipped",x=>x.status==="skipped"],all:["All",x=>1]};
+const SORT={deadline:["Deadline (soonest)",(a,b)=>a.deadline<b.deadline?-1:1],match:["Best match",(a,b)=>match(b)-match(a)],trust:["Most trusted",(a,b)=>b.trust-a.trust],newest:["Newest added",(a,b)=>a.created<b.created?1:-1],name:["Name A–Z",(a,b)=>a.name.localeCompare(b.name)]};
+function card(x){const n=left(x.deadline),tr=x.trust>=70?["ok","✅ looks official"]:x.trust>=40?["wa","⚠️ verify"]:["bad","🚩 suspicious"];
+return `<div class="card"><div class="t">${esc(x.name)}</div><div class="m">${esc(x.inst)}</div>
+<div style="margin:6px 0"><span class="tag">${esc(x.type)}</span><b>${n===0?"Last day!":n+" days left"}</b> <span class="m">· ${esc(x.deadline)} · match ${match(x)}%</span></div>
+<div class="${tr[0]}">${tr[1]} (${x.trust}/100) <span class="m">${esc(x.trust_note)}</span></div>
+${x.eligibility?`<div class="m"><b>Eligibility:</b> ${esc(x.eligibility)}</div>`:""}${x.fee||x.prize?`<div class="m">Fee: ${esc(x.fee||"–")} · Prize: ${esc(x.prize||"–")}</div>`:""}
+<div>${esc(x.details)}</div><div class="m">${url(x.link)?`<a href="${url(x.link)}" target="_blank" rel="noopener noreferrer">Official post</a> `:""}${url(x.brochure)?`· <a href="${url(x.brochure)}" target="_blank" rel="noopener noreferrer">Brochure</a>`:""}</div>
+<div class="b">${[["tracking","⭐ Track"],["applied","✅ Applied"],["skipped","🚫 Skip"]].map(([s,l])=>`<button class="${x.status===s?"pri":""}" data-i="${x.id}" data-s="${s}">${l}</button>`).join("")}</div></div>`}
+const bar=()=>`<div class="bar">${Object.entries(TABS).map(([k,v])=>`<span class="chip ${S.tab===k?"on":""}" data-tab="${k}">${v[0]} ${D.items.filter(v[1]).length}</span>`).join("")}<span class="chip ${S.tab==="inst"?"on":""}" data-tab="inst">🏛 Institutes</span></div>`;
+async function inst(){if(!D.inst)D.inst=(await api("/api/institutes"))||[];
+$("#app").innerHTML=bar()+`<div class="card"><b>Register an institute</b><p class="m">Goes live after admin approval. Add pages that list contests/internships (https only, comma separated).</p><div class="row"><input id="in" placeholder="Institute name"><input id="iw" placeholder="Website https://…"></div><input id="ip" style="width:100%;margin:4px 0" placeholder="Contest / internship page links"><div class="row"><input id="ic" placeholder="Contact email"><input id="ii" placeholder="Other info"></div><button class="pri" id="is">Submit</button> <span id="im" class="m"></span></div>`+D.inst.map(x=>`<div class="card"><div class="t">${esc(x.name)}</div><div class="m">${url(x.website)?`<a href="${url(x.website)}" target="_blank" rel="noopener noreferrer">${esc(x.website)}</a>`:""} ${esc(x.info)}</div></div>`).join("")}
+function render(){if(S.tab==="inst")return inst();const types=["All",...new Set(D.items.map(x=>x.type))];
+let L=D.items.filter(TABS[S.tab][1]).filter(x=>S.type==="All"||x.type===S.type).filter(x=>(x.name+x.inst+x.details).toLowerCase().includes(S.q.toLowerCase())).sort(SORT[S.sort][1]);
+$("#app").innerHTML=bar()+`<div class="row"><input id="q" placeholder="Search" value="${esc(S.q)}"><select id="so">${Object.entries(SORT).map(([k,v])=>`<option value="${k}" ${S.sort===k?"selected":""}>${v[0]}</option>`).join("")}</select><select id="ty">${types.map(t=>`<option ${S.type===t?"selected":""}>${esc(t)}</option>`).join("")}</select></div>`+(L.map(card).join("")||'<p class="m">Nothing here.</p>');
+const q=$("#q");q.oninput=()=>{S.q=q.value;const p=q.selectionStart;render();$("#q").focus();$("#q").setSelectionRange(p,p)};$("#so").onchange=e=>{S.sort=e.target.value;render()};$("#ty").onchange=e=>{S.type=e.target.value;render()}}
+document.addEventListener("click",async e=>{const t=e.target;if(t.dataset.tab){S.tab=t.dataset.tab;render()}else if(t.id==="is"){const b={name:$("#in").value,website:$("#iw").value,pages:$("#ip").value,contact:$("#ic").value,info:$("#ii").value};const r=await api("/api/institute",{method:"POST",body:JSON.stringify(b)});$("#im").textContent=r?r.message:"Error"}else if(t.dataset.s){const x=D.items.find(i=>i.id===t.dataset.i);x.status=t.dataset.s;render();await api("/api/status",{method:"POST",body:JSON.stringify({id:x.id,status:x.status})})}});
+(async()=>{if(!T||!API){$("#app").innerHTML='<div class="card">Open Telegram, message your Avsar bot and send <b>/login</b>. Tap the private link it sends.</div>';return}
+const r=await api("/api/items");if(!r)return;D=r;$("#u").textContent="Hi "+(D.user.name||"")+" · interests: "+((D.user.interests||[]).join(", ")||"none set");render()})();
+</script></body></html>
